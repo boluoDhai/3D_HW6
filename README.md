@@ -3,12 +3,16 @@
 |:-:|:-:|:-:|
 | 张浩轩| 17343149| 2019/10/15|
 
-## Hit UFO改进版
+- [UFO改进版](#ufo) 
+- [打靶游戏](#arrow)
+
+<h2 id="ufo"> Hit UFO改进版 </h2>  
+
 ### 游戏的运行gif图如下:  
 ![run.gif](Img/run.gif)  
 - 视频网站: [http://www.iqiyi.com/w_19sb7i6zpx.html](http://www.iqiyi.com/w_19sb7i6zpx.html)
 
-改进飞碟（Hit UFO）游戏:  
+### 改进飞碟（Hit UFO）游戏:  
 - 游戏内容要求:  
     - 按 adapter模式 设计图修改飞碟游戏
     - 使它同时支持物理运动与运动学（变换）运动
@@ -383,6 +387,218 @@ public class SSActionManager : MonoBehaviour
 }
 ```
 
+<h2 id="arrow"> 打靶游戏 </h2>
+
+### 游戏的运行gif图如下:  
+![run_arrow.gif](Img/run_arrow.gif)
+
+### 游戏内容要求：  
+- 靶对象为 5 环，按环计分； 
+- 箭对象，射中后要插在靶上  
+- 增强要求：射中后，箭对象产生颤抖效果，到下一次射击 或 1秒以后  
+- 游戏仅一轮，无限 trials；  
+- 增强要求：添加一个风向和强度标志，提高难度  
+
+具体代码在[Arrow_Asset/Scripts/](./Arrow_Asset/Scripts/)中, 如下:  
+### UI.cs
+```c#
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class UI : MonoBehaviour
+{
+    private GUIStyle style;
+    private Circle mcircle;
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        style = new GUIStyle();
+        style.fontSize = 40;
+        style.normal.textColor = new Color(1, 1, 1, 1);
+        mcircle = new Circle();
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        
+    }
+
+    void OnGUI() {
+        GUI.Label(new Rect(20, 20, 200, 100), "Score: " + Recorder.score, style);
+
+    }
+}
+```
+
+### Circle.cs
+```c#
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Circle
+{
+    private GameObject circle1;
+    private GameObject circle2;
+    private GameObject circle3;
+    private GameObject circle4;
+    private GameObject circle5;
+
+    public Circle() {
+        circle1 = Resources.Load<GameObject>("Prefab/Circle1");
+        circle1 = GameObject.Instantiate(circle1);
+        circle2 = Resources.Load<GameObject>("Prefab/Circle2");
+        circle2 = GameObject.Instantiate(circle2);
+        circle3 = Resources.Load<GameObject>("Prefab/Circle3");
+        circle3 = GameObject.Instantiate(circle3);
+        circle4 = Resources.Load<GameObject>("Prefab/Circle4");
+        circle4 = GameObject.Instantiate(circle4);
+        circle5 = Resources.Load<GameObject>("Prefab/Circle5");
+        circle5 = GameObject.Instantiate(circle5);
+
+        /*circle2.transform.parent = circle1.transform;
+        circle3.transform.parent = circle1.transform;
+        circle4.transform.parent = circle1.transform;
+        circle5.transform.parent = circle1.transform;*/
+
+        circle1.AddComponent<Score>();
+        circle2.AddComponent<Score>();
+        circle3.AddComponent<Score>();
+        circle4.AddComponent<Score>();
+        circle5.AddComponent<Score>();
+
+        circle1.name = "1";
+        circle2.name = "2";
+        circle3.name = "3";
+        circle4.name = "4";
+        circle5.name = "5";
+    }
+}
+```
+
+### Score.cs
+```c#
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Score : MonoBehaviour
+{
+    public int goal;
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        goal = int.Parse(this.gameObject.name);
+        Debug.Log("name: " + this.gameObject.name + ", goal: " + goal);
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        
+    }
+
+    void OnCollisionEnter(Collision collision) {
+        Recorder.score += goal;
+    }
+}
+```
+
+### Recorder
+```c#
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Recorder
+{
+    public static int score = 0;
+
+}
+```
+
+### Model.cs
+```c#
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Model : MonoBehaviour
+{
+    private GameObject sth;
+    private int screen_width;
+    private int screen_height;
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        sth = Resources.Load<GameObject>("Prefab/Arrow");
+        screen_width = Screen.width;
+        screen_height = Screen.height;
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        if (Input.GetMouseButtonDown(0)) {
+            Ray _ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            RaycastHit _hit;
+            Vector3 vec;
+            if(Physics.Raycast(_ray, out _hit)) {
+                vec = _hit.point;
+                vec.z = Camera.main.transform.position.z + 1;
+                sth.transform.position = vec;
+                GameObject arrow = GameObject.Instantiate(sth);
+                arrow.AddComponent<ModelController>();
+                arrow.AddComponent<Rigidbody>();
+            }
+        }
+    }
+}
+```
+
+### ModelController.cs
+```c#
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class ModelController : MonoBehaviour
+{
+    private float speed;
+    private bool fly;
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        fly = true;
+        speed = 20.0f;
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        if (this.gameObject.transform.position.y < -5) {
+            Destroy(this.gameObject);
+        }
+        if (fly) {
+            Vector3 vec = this.gameObject.transform.position;
+            vec.z -= -speed * Time.deltaTime;
+            this.gameObject.transform.position = vec;
+        }
+    }
+
+    void OnCollisionEnter(Collision collision) {
+        fly = false;
+        Destroy(GetComponent<Rigidbody>());
+        Destroy(GetComponent<Collider>());
+    }
+}
+```
 
 
 
